@@ -192,7 +192,39 @@ class PathAwareNodes:
     
     @traced_node("A", "entry_point")
     async def node_a(self, state: PathTrackingState) -> PathTrackingState:
-        """Entry point node with enhanced randomization"""
+        """
+        Entry Point Node (A) - Workflow Initialization & Request Processing
+        
+        PURPOSE:
+        - Acts as the primary entry point for all workflow executions
+        - Generates randomized request data to simulate diverse workload scenarios
+        - Establishes foundational tracing attributes for downstream path analysis
+        - Initializes execution path tracking with automatic OpenTelemetry span creation
+        
+        TRACING BEHAVIOR:
+        - @traced_node decorator automatically creates "node_A" span with type "entry_point"
+        - Records essential request metadata as span attributes (data.size, data.priority, etc.)
+        - Initializes execution_path state tracking for path-aware node behavior
+        - Captures request characteristics for routing decision analysis in subsequent nodes
+        
+        PATH-AWARE FEATURES:
+        - First node in execution path - establishes baseline for path-aware adaptations
+        - Sets up routing context that influences B1/B2 decision algorithms
+        - Creates diverse request profiles that drive different execution paths
+        - Enables downstream nodes to adapt behavior based on request characteristics
+        
+        DATA GENERATION:
+        - Creates comprehensive request metadata with randomized attributes
+        - Generates processing flags that influence routing and processing strategies
+        - Establishes data size, priority, and complexity metrics for adaptive processing
+        - Sets up retry mechanisms and processing preferences for fault tolerance
+        
+        OPENTELEMETRY INTEGRATION:
+        - Automatic span creation with structured attributes for request profiling
+        - Path tracking initialization for distributed tracing correlation
+        - Custom attributes for data characteristics enable performance analysis
+        - Provides foundation for end-to-end workflow observability
+        """
         # Just the business logic - tracing is handled by decorator
         request_types = ["data_processing", "analytics", "validation", "transformation", "aggregation"]
         complexity_levels = ["simple", "moderate", "complex", "very_complex"]
@@ -235,7 +267,39 @@ class PathAwareNodes:
     
     @traced_node("B1", "alternative_router")
     async def node_b1(self, state: PathTrackingState) -> PathTrackingState:
-        """Alternative routing node with scoring system"""
+        """
+        Alternative Router Node (B1) - Scoring-Based Route Selection
+        
+        PURPOSE:
+        - Implements alternative routing algorithm using scoring-based decision making
+        - Provides path diversity by offering different routing logic than B2
+        - Demonstrates path-aware routing where decisions consider request characteristics
+        - Acts as one of two possible routing nodes (B1 or B2) from entry point A
+        
+        TRACING BEHAVIOR:
+        - @traced_node decorator creates "node_B1" span with type "alternative_router"
+        - Records routing decision, reasoning, and scoring factors as span attributes
+        - Captures routing.decision, routing.reason, routing.score, and routing.factors
+        - Enables analysis of routing patterns and decision quality across executions
+        
+        PATH-AWARE FEATURES:
+        - Accesses previous routing decisions to display A's routing choice
+        - Adapts routing strategy based on request type, complexity, and data characteristics
+        - Considers execution path context for routing factor weighting
+        - Influences downstream C1/C2 routing based on scoring algorithm results
+        
+        ROUTING ALGORITHM:
+        - Calculates routing scores using _calculate_b1_routing_score method
+        - Weighs multiple factors: request_type, complexity, data_type, urgency
+        - Applies business logic rules for C1 vs C2 vs D1/D2 routing decisions
+        - Generates human-readable routing reasons for observability
+        
+        OPENTELEMETRY INTEGRATION:
+        - Detailed routing decision attributes for workflow analysis
+        - Score-based metrics for routing algorithm performance evaluation
+        - Factor tracking enables routing optimization and debugging
+        - Supports A/B testing of routing strategies through traceable decisions
+        """
         # Get A's routing decision to show which was chosen
         a_target = state["routing_decisions"]["a_decision"]["target"]
         print(f"🔀 Node B1: Alternative routing analysis")
@@ -274,7 +338,39 @@ class PathAwareNodes:
     
     @traced_node("B2", "enhanced_router")
     async def node_b2(self, state: PathTrackingState) -> PathTrackingState:
-        """Enhanced routing node with sophisticated decision matrix"""
+        """
+        Enhanced Router Node (B2) - Matrix-Based Decision Engine
+        
+        PURPOSE:
+        - Implements sophisticated routing using multi-dimensional decision matrix
+        - Provides alternative routing path from B1 with different decision criteria
+        - Demonstrates advanced path-aware routing with comprehensive scoring
+        - Offers more complex routing logic for high-priority/complex requests
+        
+        TRACING BEHAVIOR:
+        - @traced_node decorator creates "node_B2" span with type "enhanced_router"
+        - Records complete decision matrix as span attribute for full transparency
+        - Captures routing.decision_matrix, routing.decision, and routing.reason
+        - Enables detailed analysis of multi-factor routing decisions
+        
+        PATH-AWARE FEATURES:
+        - Analyzes request complexity to determine appropriate downstream processing
+        - Considers data size, priority, urgency, and complexity in routing matrix
+        - Adapts decision criteria based on execution context and previous path
+        - Routes to C1/C2/D1/D2 based on sophisticated scoring algorithms
+        
+        DECISION MATRIX ALGORITHM:
+        - Calculates scores for all possible downstream nodes (C1, C2, D1, D2)
+        - Weighs multiple dimensions: data_size, priority, complexity, urgency
+        - Applies business rules for optimal resource allocation
+        - Selects highest-scoring option with detailed reasoning
+        
+        OPENTELEMETRY INTEGRATION:
+        - Complete decision matrix visibility for routing analysis
+        - Multi-dimensional scoring enables optimization of routing algorithms
+        - Detailed reasoning supports debugging and performance tuning
+        - Facilitates comparison with B1 routing effectiveness
+        """
         entry_data = state["data"]["entry_data"]
         
         # Calculate decision matrix scores for all options
@@ -308,7 +404,41 @@ class PathAwareNodes:
     
     @traced_node("C1", "adaptive_processor")
     async def node_c1(self, state: PathTrackingState) -> PathTrackingState:
-        """Adaptive processing that changes strategy based on execution path"""
+        """
+        Adaptive Processor Node (C1) - Path-Aware Strategy Selection
+        
+        PURPOSE:
+        - Demonstrates advanced path-aware processing with dynamic strategy adaptation
+        - Changes processing behavior based on complete execution path history
+        - Shows how nodes can leverage OpenTelemetry context for intelligent adaptations
+        - Implements complex business logic that varies based on routing patterns
+        
+        TRACING BEHAVIOR:
+        - @traced_node decorator creates "node_C1" span with type "adaptive_processor"
+        - Records processing.strategy, processing.complexity, and processing.time
+        - Captures adaptation_reason showing why specific strategy was chosen
+        - Enables analysis of processing efficiency across different execution paths
+        
+        PATH-AWARE FEATURES:
+        - Analyzes complete execution path using SpanPathExtractor utilities
+        - Adapts processing strategy based on previous nodes (B1, B2, D1, D2)
+        - Implements different complexity levels based on routing path taken
+        - Demonstrates how downstream nodes can optimize based on upstream decisions
+        
+        ADAPTIVE STRATEGIES:
+        - multi_branch_convergence: When both B1 and B2 were visited (complex scenario)
+        - priority_processing: High-priority requests from B2 enhanced routing
+        - standard_processing: Normal processing for moderate complexity requests
+        - post_processing_analysis: Special handling when coming from D1/D2
+        - direct_b1_processing: Optimized path for B1 alternative routing
+        - fallback_processing: Default strategy for unexpected routing patterns
+        
+        OPENTELEMETRY INTEGRATION:
+        - Strategy selection attributes enable processing pattern analysis
+        - Processing time metrics support performance optimization
+        - Adaptation reasoning provides insights into path-aware decision making
+        - Complexity scoring enables workload characterization and resource planning
+        """
         # Determine strategy based on how we got here
         previous_path = SpanPathExtractor.get_previous_node_path_from_state(state)
         previous_node = SpanPathExtractor.get_previous_node_from_state(state)
@@ -369,7 +499,39 @@ class PathAwareNodes:
     
     @traced_node("C2", "simple_processor")
     async def node_c2(self, state: PathTrackingState) -> PathTrackingState:
-        """Simple processing node"""
+        """
+        Simple Processor Node (C2) - Lightweight Processing Strategy
+        
+        PURPOSE:
+        - Provides efficient, lightweight processing for simple requests
+        - Demonstrates contrasting approach to C1's adaptive complexity
+        - Acts as optimized path for requests not requiring advanced processing
+        - Shows how different nodes can implement varying processing philosophies
+        
+        TRACING BEHAVIOR:
+        - @traced_node decorator creates "node_C2" span with type "simple_processor"
+        - Records processing.strategy and processing.time for performance analysis
+        - Captures efficiency metrics for comparison with C1 adaptive processing
+        - Enables identification of optimal routing decisions for simple workloads
+        
+        PATH-AWARE FEATURES:
+        - Inherits path context through traced_node decorator automatically
+        - Benefits from execution path tracking without complex path-specific logic
+        - Represents optimized processing path for straightforward requests
+        - Demonstrates that not all nodes need complex path-aware adaptations
+        
+        PROCESSING STRATEGY:
+        - lightweight_processing: Fast, efficient processing for simple requests
+        - Short processing times (0.1-0.5s) for rapid throughput
+        - High efficiency scores (90-100) indicating optimal resource utilization
+        - Minimal overhead approach for maximum processing speed
+        
+        OPENTELEMETRY INTEGRATION:
+        - Processing time metrics for performance benchmarking
+        - Efficiency scoring enables comparison with adaptive processing approaches
+        - Strategy attributes support workload characterization
+        - Provides baseline for measuring processing optimization benefits
+        """
         processing_time = random.uniform(0.1, 0.5)
         await asyncio.sleep(processing_time)
         
@@ -391,7 +553,45 @@ class PathAwareNodes:
     
     @traced_node("D1", "intermediate_processor")
     async def node_d1(self, state: PathTrackingState) -> PathTrackingState:
-        """Intermediate processing node for complex workflows"""
+        """
+        Intermediate Processor Node (D1) - Validation & Transformation Pipeline
+        
+        PURPOSE:
+        - Implements intermediate processing for complex workflows requiring validation
+        - Demonstrates conditional routing based on processing requirements
+        - Acts as preprocessing stage before final convergence or additional processing
+        - Shows dynamic workflow branching based on data quality assessment
+        
+        TRACING BEHAVIOR:
+        - @traced_node decorator creates "node_D1" span with type "intermediate_processor"
+        - Records processing.strategy and processing.time for pipeline analysis
+        - Captures validation results and data quality metrics
+        - Enables tracking of intermediate processing effectiveness
+        
+        PATH-AWARE FEATURES:
+        - Inherits complete execution path context through traced_node infrastructure
+        - Makes routing decisions (C1 vs E) based on processing results
+        - Demonstrates how intermediate nodes can influence final workflow convergence
+        - Shows conditional path extension based on data quality assessment
+        
+        PROCESSING STRATEGIES:
+        - intermediate_validation: When additional processing validation is required
+        - direct_transformation: When data can be processed without extra validation
+        - Dynamic routing to C1 for additional processing or E for final convergence
+        - Data quality scoring (75-95) influences downstream routing decisions
+        
+        CONDITIONAL ROUTING:
+        - Calculates C1 vs E scores to determine optimal next step
+        - Routes to C1 when additional_processing_required
+        - Routes to E for direct convergence when validation passes
+        - Sets routing_decisions state for downstream path-aware adaptations
+        
+        OPENTELEMETRY INTEGRATION:
+        - Processing strategy metrics for pipeline optimization
+        - Data quality scores enable quality assurance tracking
+        - Routing decision attributes support workflow pattern analysis
+        - Processing time metrics facilitate performance tuning
+        """
         processing_time = random.uniform(0.3, 1.0)
         await asyncio.sleep(processing_time)
         
@@ -430,7 +630,45 @@ class PathAwareNodes:
     
     @traced_node("D2", "parallel_processor")
     async def node_d2(self, state: PathTrackingState) -> PathTrackingState:
-        """Parallel processing for large datasets"""
+        """
+        Parallel Processor Node (D2) - High-Throughput Processing Engine
+        
+        PURPOSE:
+        - Implements parallel processing for large datasets and high-throughput scenarios
+        - Demonstrates scalable processing strategies with configurable worker allocation
+        - Shows how processing can be optimized for different data characteristics
+        - Acts as alternative intermediate processing path to D1 with focus on throughput
+        
+        TRACING BEHAVIOR:
+        - @traced_node decorator creates "node_D2" span with type "parallel_processor"
+        - Records processing.strategy, processing.time, and processing.parallel_workers
+        - Captures throughput metrics and parallel configuration details
+        - Enables analysis of parallel processing efficiency and resource utilization
+        
+        PATH-AWARE FEATURES:
+        - Inherits execution path context for adaptive parallel configuration
+        - Makes intelligent routing decisions (C1 vs E) based on processing results
+        - Demonstrates how parallel processing can influence workflow convergence patterns
+        - Shows conditional path extension for complex parallel-to-serial processing scenarios
+        
+        PARALLEL PROCESSING STRATEGIES:
+        - parallel_streaming: High-throughput streaming for 3+ workers
+        - standard_parallel: Standard parallel processing for 2 workers
+        - Dynamic worker allocation (2-4 workers) based on workload characteristics
+        - Throughput scoring (85-100) indicating processing efficiency
+        
+        CONDITIONAL ROUTING:
+        - Calculates C1 vs E scores for optimal downstream routing
+        - Routes to C1 for parallel_to_complex_processing when additional work needed
+        - Routes to E for direct convergence when parallel processing completes workflow
+        - Balances parallel processing benefits with convergence efficiency
+        
+        OPENTELEMETRY INTEGRATION:
+        - Parallel worker metrics for resource allocation analysis
+        - Throughput scoring enables parallel processing optimization
+        - Processing strategy attributes support workload characterization
+        - Routing decision tracking facilitates parallel workflow pattern analysis
+        """
         processing_time = random.uniform(0.2, 0.8)
         await asyncio.sleep(processing_time)
         
@@ -472,7 +710,45 @@ class PathAwareNodes:
     
     @traced_node("E", "convergence_analyzer")
     async def node_e(self, state: PathTrackingState) -> PathTrackingState:
-        """Final convergence analyzer that examines complete execution path"""
+        """
+        Convergence Analyzer Node (E) - Final Path Analysis & Result Aggregation
+        
+        PURPOSE:
+        - Acts as final convergence point for all workflow execution paths
+        - Demonstrates comprehensive path analysis using complete execution history
+        - Aggregates results from all processing nodes for final workflow assessment
+        - Shows how OpenTelemetry context enables end-to-end workflow analysis
+        
+        TRACING BEHAVIOR:
+        - @traced_node decorator creates "node_E" span with type "convergence_analyzer"
+        - Records aggregation.nodes_count, aggregation.time, and path.efficiency
+        - Captures complete execution path analysis for workflow optimization
+        - Provides final workflow metrics for performance and pattern analysis
+        
+        PATH-AWARE FEATURES:
+        - Analyzes complete execution path using state["execution_path"]
+        - Evaluates path efficiency (optimal ≤4 nodes, suboptimal >4 nodes)
+        - Identifies convergence patterns from different processing branches
+        - Demonstrates how final nodes can provide comprehensive workflow insights
+        
+        RESULT AGGREGATION:
+        - Collects all *_result data from previous processing nodes
+        - Aggregates processing times, strategies, and scores across execution path
+        - Calculates final workflow score based on complete processing pipeline
+        - Provides comprehensive workflow summary for analysis and optimization
+        
+        PATH ANALYSIS FEATURES:
+        - execution_path: Complete node sequence for pattern analysis
+        - path_efficiency: Workflow efficiency assessment based on node count
+        - convergence_point: Identifies immediate predecessor for routing analysis
+        - total_nodes_processed: Quantitative measure of workflow complexity
+        
+        OPENTELEMETRY INTEGRATION:
+        - Final workflow metrics for end-to-end performance analysis
+        - Path efficiency scoring enables workflow optimization
+        - Complete execution path tracking supports pattern recognition
+        - Aggregated results provide comprehensive workflow observability
+        """
         processing_time = random.uniform(0.1, 0.3)
         await asyncio.sleep(processing_time)
         
@@ -689,8 +965,6 @@ def setup_tracing(enable_console=False, enable_otlp=False):
     # Setup OTLP exporter only if explicitly requested
     if enable_otlp:
         try:
-            # First check if the OTLP package is available
-            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
             
             # Test if collector is available before setting up exporter
             if test_otlp_connection():
