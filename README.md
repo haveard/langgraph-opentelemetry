@@ -142,9 +142,34 @@ python main.py --otlp
 - Dependencies in `requirements.txt` (LangGraph, OpenTelemetry, etc.)
 - Optional: Docker for Jaeger tracing
 
-## Learn More
+## Testing
 
-Check out the other files for deeper dives:
-- `PATH_TRACKING_GUIDE.md` - Detailed telemetry documentation
-- `JAEGER_SETUP.md` - Complete Jaeger setup guide  
-- `QUICK_REFERENCE.md` - Commands and troubleshooting
+The project includes a comprehensive test suite for the reusable tracker library:
+
+```bash
+# Install test dependencies
+pip install -r test-requirements.txt
+
+# Run all tests
+python -m pytest test_tracker.py -v
+
+# Run tests with coverage
+python run_tests.py --coverage
+
+# Run specific test categories
+python run_tests.py --unit        # Unit tests only
+python run_tests.py --integration # Integration tests only
+python run_tests.py --fast        # Fast run (stop on first failure)
+
+# Run specific tests
+python run_tests.py --specific TestPathAwareNode
+```
+
+**Test Coverage**: 52 comprehensive test cases covering:
+- ✅ Core types and configuration
+- ✅ Path introspection utilities  
+- ✅ All node classes and behaviors
+- ✅ Decorators and workflow builder
+- ✅ Integration scenarios
+- ✅ Error handling and edge cases
+
