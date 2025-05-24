@@ -74,7 +74,8 @@ class SpanPathExtractor:
     def get_previous_node_from_state(state: PathTrackingState) -> Optional[str]:
         """Get the immediately previous node from state"""
         path = state["execution_path"]
-        return path[-1] if path else None
+        # Return the second-to-last node (the one before the current one)
+        return path[-2] if len(path) >= 2 else None
     
     @staticmethod
     def get_previous_node_path_from_state(state: PathTrackingState) -> List[str]:
@@ -223,15 +224,22 @@ class PathAwareNodes:
         current_span.set_attribute("data.type", state["data"]["entry_data"]["data_type"])
         current_span.set_attribute("data.complexity", state["data"]["entry_data"]["complexity"])
         
-        print(f"   Request type: {state['data']['entry_data']['request_type']}")
-        print(f"   Complexity: {state['data']['entry_data']['complexity']}")
-        print(f"   Data size: {state['data']['entry_data']['data_size']}")
+        print(f"🚀 Node A: Starting workflow (request: {state['data']['entry_data']['request_type']}, complexity: {state['data']['entry_data']['complexity']})")
+        print(f"   Current path: {' -> '.join(state['execution_path'])}")
+        # Display A routing decision (access from pre-set routing decision)
+        if "a_decision" in state["routing_decisions"]:
+            a_decision = state["routing_decisions"]["a_decision"]
+            print(f"   A routing: {a_decision['target']} (B1 score: {a_decision['b1_score']:.1f}, B2 score: {a_decision['b2_score']:.1f})")
         
         return state
     
     @traced_node("B1", "alternative_router")
     async def node_b1(self, state: PathTrackingState) -> PathTrackingState:
-        """Alternative routing node with different decision logic"""
+        """Alternative routing node with scoring system"""
+        # Get A's routing decision to show which was chosen
+        a_target = state["routing_decisions"]["a_decision"]["target"]
+        print(f"🔀 Node B1: Alternative routing analysis")
+        
         # Business logic only
         entry_data = state["data"]["entry_data"]
         routing_score = self._calculate_b1_routing_score(entry_data)
@@ -264,58 +272,99 @@ class PathAwareNodes:
         
         return state
     
-    @traced_node("B2", "alternative_router")
+    @traced_node("B2", "enhanced_router")
     async def node_b2(self, state: PathTrackingState) -> PathTrackingState:
-        """Second alternative routing node"""
+        """Enhanced routing node with sophisticated decision matrix"""
         entry_data = state["data"]["entry_data"]
         
-        # Different routing logic than B1
-        if entry_data["data_type"] == "streaming":
-            routing_decision = "D2"
-            routing_reason = "streaming_specialized"
-        elif entry_data["urgency"] == "critical":
-            routing_decision = "C1"
-            routing_reason = "critical_priority"
-        elif entry_data["complexity"] in ["simple", "moderate"]:
-            routing_decision = "C2"
-            routing_reason = "simple_processing"
-        else:
-            routing_decision = "D1"
-            routing_reason = "default_complex"
+        # Calculate decision matrix scores for all options
+        decision_matrix = self._calculate_b2_decision_matrix(entry_data)
+        routing_decision, routing_reason = self._make_b2_routing_decision(decision_matrix, entry_data)
         
+        # Set routing attributes
         current_span = trace.get_current_span()
         current_span.set_attribute("routing.decision", routing_decision)
         current_span.set_attribute("routing.reason", routing_reason)
+        current_span.set_attribute("routing.decision_matrix", str(decision_matrix))
         
         state["routing_decisions"]["b2_decision"] = {
             "target": routing_decision,
-            "reason": routing_reason
+            "reason": routing_reason,
+            "decision_matrix": decision_matrix,
+            "context": {
+                "data_size": entry_data["data_size"],
+                "priority": entry_data["priority"],
+                "complexity": entry_data["complexity"],
+                "urgency": entry_data["urgency"]
+            }
         }
         
-        print(f"   Routing decision: {routing_decision}")
-        print(f"   Reason: {routing_reason}")
+        # Format decision matrix for display
+        matrix_display = {k: f"{v:.1f}" for k, v in decision_matrix.items()}
+        print(f"   Decision matrix: {matrix_display}")
+        print(f"   Routing decision: {routing_decision} (score: {decision_matrix[routing_decision]:.1f}, reason: {routing_reason})")
+        
         return state
     
-    @traced_node("C1", "complex_processor")
+    @traced_node("C1", "adaptive_processor")
     async def node_c1(self, state: PathTrackingState) -> PathTrackingState:
-        """Complex processing node"""
-        processing_time = random.uniform(0.5, 2.0)
-        await asyncio.sleep(processing_time)
+        """Adaptive processing that changes strategy based on execution path"""
+        # Determine strategy based on how we got here
+        previous_path = SpanPathExtractor.get_previous_node_path_from_state(state)
+        previous_node = SpanPathExtractor.get_previous_node_from_state(state)
         
-        strategy = "advanced_analytics" if state["data"]["entry_data"]["complexity"] == "very_complex" else "standard_complex"
+        # Adaptive strategy selection
+        if "B1" in previous_path and "B2" in previous_path:
+            strategy = "multi_branch_convergence"
+            complexity = "high"
+        elif previous_node == "B2":
+            if "routing_decisions" in state and "b2_decision" in state["routing_decisions"]:
+                b2_reason = state["routing_decisions"]["b2_decision"]["reason"]
+                if "high_priority" in b2_reason or "complex" in b2_reason:
+                    strategy = "priority_processing"
+                    complexity = "high"
+                else:
+                    strategy = "standard_processing" 
+                    complexity = "medium"
+            else:
+                strategy = "standard_processing"
+                complexity = "medium"
+        elif previous_node in ["D1", "D2"]:
+            strategy = "post_processing_analysis"
+            complexity = "medium"
+        elif previous_node == "B1":
+            strategy = "direct_b1_processing"
+            complexity = "medium"
+        else:
+            strategy = "fallback_processing"
+            complexity = "low"
+        
+        # Processing time based on complexity
+        if complexity == "high":
+            processing_time = random.uniform(0.8, 2.0)
+        elif complexity == "medium":
+            processing_time = random.uniform(0.5, 1.2)
+        else:
+            processing_time = random.uniform(0.3, 0.8)
+        
+        await asyncio.sleep(processing_time)
         
         state["data"]["c1_result"] = {
             "processing_strategy": strategy,
+            "complexity": complexity,
             "processing_time": processing_time,
+            "adaptation_reason": f"prev={previous_node},path_depth={len(previous_path)}",
             "complexity_score": random.randint(80, 100)
         }
         
         current_span = trace.get_current_span()
         current_span.set_attribute("processing.strategy", strategy)
+        current_span.set_attribute("processing.complexity", complexity)
         current_span.set_attribute("processing.time", processing_time)
+        current_span.set_attribute("processing.adaptation_reason", state["data"]["c1_result"]["adaptation_reason"])
         
-        print(f"   Processing strategy: {strategy}")
-        print(f"   Processing time: {processing_time:.3f}s")
+        print(f"   Adaptive processing (strategy: {strategy})")
+        print(f"   Complexity: {complexity}, Processing time: {processing_time:.3f}s")
         return state
     
     @traced_node("C2", "simple_processor")
@@ -340,55 +389,95 @@ class PathAwareNodes:
         print(f"   Processing time: {processing_time:.3f}s")
         return state
     
-    @traced_node("D1", "data_processor")
+    @traced_node("D1", "intermediate_processor")
     async def node_d1(self, state: PathTrackingState) -> PathTrackingState:
-        """Data processing node"""
+        """Intermediate processing node for complex workflows"""
         processing_time = random.uniform(0.3, 1.0)
         await asyncio.sleep(processing_time)
         
-        strategy = "data_transformation"
+        # Determine if additional processing is needed
+        additional_processing = random.choice([True, False])
+        strategy = "intermediate_validation" if additional_processing else "direct_transformation"
+        
+        # Calculate routing to next node (C1 or E)
+        c1_score = random.uniform(2.0, 6.0)
+        e_score = random.uniform(1.0, 4.0)
+        next_target = "C1" if c1_score > e_score else "E"
         
         state["data"]["d1_result"] = {
             "processing_strategy": strategy,
             "processing_time": processing_time,
+            "additional_processing": additional_processing,
             "data_quality_score": random.randint(75, 95)
         }
+        
+        # Set routing decision if going to C1
+        if next_target == "C1":
+            state["routing_decisions"]["d1_decision"] = {
+                "target": "C1",
+                "reason": "additional_processing_required"
+            }
         
         current_span = trace.get_current_span()
         current_span.set_attribute("processing.strategy", strategy)
         current_span.set_attribute("processing.time", processing_time)
         
-        print(f"   Processing strategy: {strategy}")
-        print(f"   Processing time: {processing_time:.3f}s")
+        print(f"   Strategy: {strategy}, Additional processing: {additional_processing}")
+        if next_target == "C1":
+            print(f"   D1 routing: C1 (C1 score: {c1_score:.1f}, E score: {e_score:.1f})")
+        
         return state
     
-    @traced_node("D2", "stream_processor")
+    @traced_node("D2", "parallel_processor")
     async def node_d2(self, state: PathTrackingState) -> PathTrackingState:
-        """Stream processing node"""
+        """Parallel processing for large datasets"""
         processing_time = random.uniform(0.2, 0.8)
         await asyncio.sleep(processing_time)
         
-        strategy = "stream_processing"
+        # Determine parallel processing configuration
+        parallel_workers = random.randint(2, 4)
+        additional_processing = random.choice([True, False])
+        strategy = "parallel_streaming" if parallel_workers > 2 else "standard_parallel"
+        
+        # Calculate routing to next node (C1 or E)
+        c1_score = random.uniform(2.0, 6.0)
+        e_score = random.uniform(1.0, 4.0)
+        next_target = "C1" if c1_score > e_score else "E"
         
         state["data"]["d2_result"] = {
             "processing_strategy": strategy,
             "processing_time": processing_time,
+            "parallel_workers": parallel_workers,
+            "additional_processing": additional_processing,
             "throughput_score": random.randint(85, 100)
         }
+        
+        # Set routing decision if going to C1
+        if next_target == "C1":
+            state["routing_decisions"]["d2_decision"] = {
+                "target": "C1",
+                "reason": "parallel_to_complex_processing"
+            }
         
         current_span = trace.get_current_span()
         current_span.set_attribute("processing.strategy", strategy)
         current_span.set_attribute("processing.time", processing_time)
+        current_span.set_attribute("processing.parallel_workers", parallel_workers)
         
-        print(f"   Processing strategy: {strategy}")
-        print(f"   Processing time: {processing_time:.3f}s")
+        print(f"   Parallel workers: {parallel_workers}, Additional processing needed: {additional_processing}")
+        if next_target == "C1":
+            print(f"   D2 routing: C1 (C1 score: {c1_score:.1f}, E score: {e_score:.1f})")
+        
         return state
     
-    @traced_node("E", "aggregator")
+    @traced_node("E", "convergence_analyzer")
     async def node_e(self, state: PathTrackingState) -> PathTrackingState:
-        """Final aggregation node"""
+        """Final convergence analyzer that examines complete execution path"""
         processing_time = random.uniform(0.1, 0.3)
         await asyncio.sleep(processing_time)
+        
+        # Analyze the complete execution path
+        complete_path = state["execution_path"]
         
         # Collect all processing results
         results = {}
@@ -399,17 +488,27 @@ class PathAwareNodes:
         state["data"]["final_result"] = {
             "aggregation_strategy": "comprehensive_summary",
             "processing_time": processing_time,
-            "total_nodes_processed": len(state["execution_path"]),
+            "total_nodes_processed": len(complete_path),
             "processing_results": results,
-            "final_score": random.randint(80, 100)
+            "final_score": random.randint(80, 100),
+            "path_analysis": {
+                "execution_path": complete_path,
+                "path_efficiency": "optimal" if len(complete_path) <= 4 else "suboptimal",
+                "convergence_point": complete_path[-2] if len(complete_path) > 1 else "direct"
+            }
         }
         
         current_span = trace.get_current_span()
-        current_span.set_attribute("aggregation.nodes_count", len(state["execution_path"]))
+        current_span.set_attribute("aggregation.nodes_count", len(complete_path))
         current_span.set_attribute("aggregation.time", processing_time)
+        current_span.set_attribute("path.efficiency", state["data"]["final_result"]["path_analysis"]["path_efficiency"])
         
-        print(f"   Processed {len(state['execution_path'])} nodes in {processing_time:.3f}s")
-        print(f"   Final score: {state['data']['final_result']['final_score']}")
+        print(f"   Final convergence")
+        complete_path_str = " → ".join(complete_path)
+        print(f"   Complete execution path: {complete_path_str}")
+        if len(complete_path) > 3:
+            print(f"   Path variety achieved: Different routing each run!")
+        
         return state
     
     def _calculate_b1_routing_score(self, entry_data: Dict[str, Any]) -> float:
@@ -457,6 +556,105 @@ class PathAwareNodes:
             routing_factors.append("random_override_applied")
         
         return routing_decision, routing_reason, routing_factors
+    
+    def _calculate_b2_decision_matrix(self, entry_data: Dict[str, Any]) -> Dict[str, float]:
+        """Calculate sophisticated decision matrix for B2 routing"""
+        scores = {"C1": 0.0, "C2": 0.0, "D1": 0.0, "D2": 0.0}
+        
+        # Base scoring by data characteristics
+        data_size = entry_data["data_size"]
+        priority = entry_data["priority"]
+        complexity = entry_data["complexity"]
+        urgency = entry_data["urgency"]
+        data_type = entry_data["data_type"]
+        
+        # C1 (Complex processor) scoring
+        if complexity in ["complex", "very_complex"]:
+            scores["C1"] += 3.0
+        if priority == "high":
+            scores["C1"] += 2.5
+        if data_size > 1000:
+            scores["C1"] += 2.0
+        if urgency == "critical":
+            scores["C1"] += 1.5
+        
+        # C2 (Simple processor) scoring  
+        if complexity in ["simple", "moderate"]:
+            scores["C2"] += 3.0
+        if data_size < 500:
+            scores["C2"] += 2.0
+        if priority == "low":
+            scores["C2"] += 1.5
+        if urgency in ["low", "normal"]:
+            scores["C2"] += 1.0
+        
+        # D1 (Data processor) scoring
+        if data_type in ["structured", "mixed"]:
+            scores["D1"] += 2.5
+        if complexity == "moderate":
+            scores["D1"] += 2.0
+        if 500 <= data_size <= 1000:
+            scores["D1"] += 1.5
+        if entry_data["processing_flags"]["requires_validation"]:
+            scores["D1"] += 1.0
+        
+        # D2 (Stream processor) scoring
+        if data_type == "streaming":
+            scores["D2"] += 4.0
+        if entry_data["processing_flags"]["enable_parallel"]:
+            scores["D2"] += 2.0
+        if data_size > 800:
+            scores["D2"] += 1.5
+        if urgency in ["high", "critical"]:
+            scores["D2"] += 1.0
+        
+        # Add randomness to each score
+        for key in scores:
+            scores[key] += random.uniform(0, 3.0)
+        
+        return scores
+    
+    def _make_b2_routing_decision(self, decision_matrix: Dict[str, float], entry_data: Dict[str, Any]) -> tuple:
+        """Make routing decision based on decision matrix with override possibilities"""
+        
+        # 30% chance of random override (as mentioned in README)
+        if random.random() < 0.3:
+            override_target = random.choice(list(decision_matrix.keys()))
+            return override_target, "random_override"
+        
+        # Find highest scoring option
+        best_target = max(decision_matrix.items(), key=lambda x: x[1])
+        target_node = best_target[0]
+        
+        # Determine reason based on characteristics
+        if target_node == "C1":
+            if entry_data["priority"] == "high":
+                reason = "high_priority_complex"
+            elif entry_data["complexity"] in ["complex", "very_complex"]:
+                reason = "complexity_routing"
+            else:
+                reason = "best_score_c1"
+        elif target_node == "C2":
+            if entry_data["complexity"] in ["simple", "moderate"]:
+                reason = "simple_processing"
+            elif entry_data["data_size"] < 500:
+                reason = "small_data_optimization"
+            else:
+                reason = "best_score_c2"
+        elif target_node == "D1":
+            if entry_data["data_type"] in ["structured", "mixed"]:
+                reason = "structured_data_processing"
+            else:
+                reason = "best_score_d1"
+        else:  # D2
+            if entry_data["data_type"] == "streaming":
+                reason = "streaming_specialized"
+            elif entry_data["processing_flags"]["enable_parallel"]:
+                reason = "parallel_processing"
+            else:
+                reason = "best_score_d2"
+        
+        return target_node, reason
 
 
 def test_otlp_connection(endpoint: str = "http://localhost:4317", timeout: int = 2) -> bool:
@@ -543,7 +741,8 @@ def create_router_function(from_node: str, options: List[str]):
     def router(state: PathTrackingState) -> str:
         if from_node in state["routing_decisions"]:
             return state["routing_decisions"][from_node]["target"]
-        return options[0]  # Default fallback
+        # Default to last option (usually E for D1/D2)
+        return options[-1]
     return router
 
 
@@ -566,9 +765,21 @@ async def run_single_execution(tracer, app, execution_num: int):
         main_span.set_attribute("workflow.start_time", datetime.now().isoformat())
         
         try:
-            # Add routing decision for A -> B1/B2
+            # Calculate B1 and B2 scores for A routing decision
+            b1_score = random.uniform(3.0, 8.0)
+            b2_score = random.uniform(3.0, 8.0)
+            
+            # Choose based on scores (with some randomness)
+            a_target = "B2" if b2_score > b1_score else "B1"
+            
+            # 25% chance to override for demonstration
+            if random.random() < 0.25:
+                a_target = random.choice(["B1", "B2"])
+            
             initial_state["routing_decisions"]["a_decision"] = {
-                "target": random.choice(["B1", "B2"])
+                "target": a_target,
+                "b1_score": b1_score,
+                "b2_score": b2_score
             }
             
             result = await app.ainvoke(initial_state)
@@ -640,11 +851,21 @@ async def main():
         {"C1": "C1", "C2": "C2", "D1": "D1", "D2": "D2"}
     )
     
-    # All processing nodes go to E
+    workflow.add_conditional_edges(
+        "D1",
+        create_router_function("d1_decision", ["C1", "E"]),
+        {"C1": "C1", "E": "E"}
+    )
+    
+    workflow.add_conditional_edges(
+        "D2", 
+        create_router_function("d2_decision", ["C1", "E"]),
+        {"C1": "C1", "E": "E"}
+    )
+    
+    # C1 and C2 go to E
     workflow.add_edge("C1", "E")
     workflow.add_edge("C2", "E")
-    workflow.add_edge("D1", "E")
-    workflow.add_edge("D2", "E")
     
     # E goes to END
     workflow.add_edge("E", END)
