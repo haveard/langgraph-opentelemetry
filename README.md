@@ -16,14 +16,24 @@ This project shows how to create workflow nodes that are "path-aware" - they can
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the demo
+# Run the demo (default: 3 executions, no trace export)
 python main.py
+
+# Run with more executions to see path variety
+python main.py --runs 5
+
+# Enable console output for detailed telemetry
+python main.py --console --runs 3
+
+# Enable OTLP export (requires collector like Jaeger)
+python main.py --otlp --runs 3
 ```
 
 You'll see multiple workflow executions with varied paths like:
 - `A → B1 → C1 → E`
 - `A → B2 → C2 → E` 
-- `A → B2 → D2 → C1 → E`
+- `A → B2 → D2 → E`
+- `A → B1 → D1 → E`
 
 ## How It Works
 
@@ -85,16 +95,43 @@ Traditional workflows treat each step in isolation. This demo shows how **contex
 4. **Support A/B testing** - Route different paths and measure outcomes
 5. **Build resilient systems** - Implement fallbacks based on execution history
 
+## Command Line Options
+
+```bash
+# Basic usage
+python main.py                    # 3 runs, no trace export
+python main.py --runs 5           # 5 runs, no trace export
+
+# Tracing options
+python main.py --console          # Enable console trace output
+python main.py --otlp             # Enable OTLP export (requires collector)
+
+# Combined examples
+python main.py --console --runs 2 # Console tracing with 2 runs
+python main.py --otlp --runs 10   # OTLP export with 10 runs
+```
+
+### Tracing Modes
+
+- **Default (no flags)**: Spans recorded internally, no export, clean output
+- **`--console`**: Detailed JSON span output in terminal for debugging
+- **`--otlp`**: Export to OTLP collector (automatically falls back to console if no collector)
+
 ## Optional: Visual Tracing with Jaeger
 
 For advanced users who want visual trace analysis:
 
 ```bash
 # Start Jaeger (requires Docker)
-docker run -d --name jaeger -p 16686:16686 -p 14268:14268 jaegertracing/all-in-one:latest
+docker run -d --name jaeger \
+  -p 4317:4317 \
+  -p 16686:16686 \
+  -p 14268:14268 \
+  -p 6831:6831/udp \
+  jaegertracing/all-in-one:latest
 
-# Run with Jaeger tracing
-python main.py --jaeger
+# Run with OTLP tracing
+python main.py --otlp
 
 # View traces at http://localhost:16686
 ```
